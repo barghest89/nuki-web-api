@@ -1,12 +1,7 @@
-# nukiwebapi
+# nuki-web-api
 
-A Python wrapper for the [Nuki Web API](https://developer.nuki.io/).
+A Python wrapper for the [Nuki Web API](https://api.nuki.io/).
 
-## Installation
-
-```bash
-pip install nukiwebapi
-```
 
 ## Usage
 ```Python
