@@ -18,7 +18,7 @@ class Smartlock:
         the API only relies on the smartlock_id in decimal format as the identifier of
         the smartlock.
         """
-        self.smartlock_hex_id = f'{smartlock_id:x}'[1:]
+        self.smartlock_hex_id = f'{smartlock_id:x}'[1:].upper()
         self._data = data or {}
 
 
