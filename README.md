@@ -2,6 +2,12 @@
 
 A Python wrapper for the [Nuki Web API](https://api.nuki.io/).
 
+## Installation
+
+```bash
+pip install nuki-web-api
+```
+
 
 ## Usage
 ```Python
