@@ -12,6 +12,7 @@ from nukiwebapi.notification import Notification
 from nukiwebapi.opener import Opener
 from nukiwebapi.service import Service
 from nukiwebapi.smartlock import Smartlock
+from nukiwebapi.smartlock_instance import SmartlockInstance
 from nukiwebapi.smartlock_auth import SmartlockAuth
 from nukiwebapi.smartlock_log import SmartlockLog
 
@@ -28,7 +29,8 @@ class NukiWebAPI:
         self.address_reservation = AddressReservation(self)
         self.address_token = AddressToken(self)
         self.api_key = ApiKey(self)
-        self.smartlocks = self._fetch_smartlocks()
+        self.smartlock = Smartlock(self)
+        self.lock_instances = self._fetch_smartlocks()
         self.advanced_api = AdvancedApi(self)
         self.company = Company(self)
         self.notification = Notification(self)
@@ -49,7 +51,7 @@ class NukiWebAPI:
             smartlock_id = item.get("smartlockId")
             if not smartlock_id:
                 continue  # skip invalid entries
-            smartlock = Smartlock(
+            smartlock = SmartlockInstance(
                 client=self,
                 smartlock_id=smartlock_id,
                 data=item

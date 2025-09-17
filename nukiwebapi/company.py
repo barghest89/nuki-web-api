@@ -6,5 +6,6 @@ class Company:
 
     def list_companies(self):
         """Get a list of companies."""
+        # GET /company
         return self.client._request("GET", "/company")
         

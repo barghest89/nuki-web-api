@@ -15,7 +15,11 @@ from nukiwebapi import NukiWebAPI
 
 client = NukiWebAPI("YOUR_ACCESS_TOKEN")
 
-for lock_id, lock in client.smartlocks():
-    print(lock_id, lock.name)
-    lock.unlock()
+for lock_id, lock in client.lock_instances:
+    print(lock.name)
+    print(lock.hex_id)
+
+    print(lock.is_locked)
+    print(lock.battery_charge)
+
 ```
