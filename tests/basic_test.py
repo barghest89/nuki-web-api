@@ -8,11 +8,11 @@ load_dotenv()  # looks for .env in cwd
 API_TOKEN = os.getenv("NUKI_API_TOKEN")
 SMARTLOCK_ID = os.getenv("NUKI_SMARTLOCK_ID")
 
-print(API_TOKEN)
-print(SMARTLOCK_ID)
 
 def test_basic_1():
     # from nuki_web_api.modules import Smartlock
+    print("NUKI_API_TOKEN is set:", bool(os.getenv("NUKI_API_TOKEN")))
+    print("NUKI_SMARTLOCK_ID is set:", bool(os.getenv("NUKI_SMARTLOCK_ID")))
 
     wapi = NukiWebAPI(API_TOKEN)
     # print(wapi.fetch_smartlocks())
