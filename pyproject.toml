@@ -21,6 +21,13 @@ dependencies = [
   "requests==2.32.5"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "python-dotenv",
+]
+
 [project.urls]
 Homepage = "https://github.com/barghest89/nuki-web-api"
 "Bug Tracker" = "https://github.com/barghest89/nuki-web-api/issues"
