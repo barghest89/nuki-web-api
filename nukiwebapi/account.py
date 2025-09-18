@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class Account:
@@ -30,19 +30,20 @@ class Account:
         return self.client._request("DELETE", "/account")
 
     # ---- Email ----
-    def change_email(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def change_email(self, email: str) -> Dict[str, Any]:
         """Change account email.
 
         POST /account/email/change
         """
+        data = {"email": email}
         return self.client._request("POST", "/account/email/change", json=data)
 
-    def verify_email(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Verify account email.
+    def verify_email(self) -> Dict[str, Any]:
+        """Triggers the email change verification email.
 
         POST /account/email/verify
         """
-        return self.client._request("POST", "/account/email/verify", json=data)
+        return self.client._request("POST", "/account/email/verify")
 
     # ---- Integrations ----
     def list_integrations(self) -> Dict[str, Any]:
@@ -52,12 +53,20 @@ class Account:
         """
         return self.client._request("GET", "/account/integration")
 
-    def delete_integration(self, integration_id: str) -> Dict[str, Any]:
+    def delete_integration(self, apiKeyId: str, tokenId: Optional[str]) -> Dict[str, Any]:
         """Delete a specific account integration.
+        If no token is provided, all tokens associated with the given apiKeyId will be removed.
 
         DELETE /account/integration
         """
-        return self.client._request("DELETE", "/account/integration", json={"id": integration_id})
+        data = {
+            "apiKeyId": apiKeyId
+        }
+
+        if tokenId:
+            data["tokenId"] = tokenId
+
+        return self.client._request("DELETE", "/account/integration", json=data)
 
     # ---- OTP ----
     def enable_otp(self) -> Dict[str, Any]:
@@ -82,11 +91,13 @@ class Account:
         return self.client._request("DELETE", "/account/otp")
 
     # ---- Password ----
-    def reset_password(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def reset_password(self, email: str, deleteApiTokens: bool) -> Dict[str, Any]:
         """Reset account password.
 
         POST /account/password/reset
         """
+        data = {"email": email, "deleteApiTokens": deleteApiTokens}
+
         return self.client._request("POST", "/account/password/reset", json=data)
 
     # ---- Account Settings ----
