@@ -28,7 +28,7 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest --maxfail=1 --disable-warnings -q --cov=nuki_web_api --cov-report=xml
+        pytest --maxfail=1 --disable-warnings -q --cov=nukiwebapi --cov-report=xml
 
     - name: Install pypa/build
       run: >-
