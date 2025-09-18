@@ -4,9 +4,9 @@ from typing import Any, Dict, Optional
 class SmartlockInstance:
     """Represents a single smartlock and its instance-level operations."""
 
-    def __init__(self, client, smartlock_id: int, data: Optional[Dict[str, Any]] = None):
+    def __init__(self, client, smartlock_id: int | str, data: Optional[Dict[str, Any]] = None):
         self.client = client
-        self.id = smartlock_id
+        self.id = str(smartlock_id)
         self._data = data or {}
 
         # Hex representation of smartlock ID for convenience
