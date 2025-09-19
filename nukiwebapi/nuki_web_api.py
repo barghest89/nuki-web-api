@@ -30,7 +30,7 @@ class NukiWebAPI:
         self.address_token = AddressToken(self)
         self.api_key = ApiKey(self)
         self.smartlock = Smartlock(self)
-        self.lock_instances = self._fetch_smartlocks()
+        self._lock_instances = None
         self.advanced_api = AdvancedApi(self)
         self.company = Company(self)
         self.notification = Notification(self)
@@ -38,7 +38,12 @@ class NukiWebAPI:
         self.service = Service(self)
         self.smartlock_auth = SmartlockAuth(self)
         self.smartlock_log = SmartlockLog(self)
-        
+
+    @property
+    def lock_instances(self):
+        if self._lock_instances is None:
+            self._lock_instances = self._fetch_smartlocks()
+        return self._lock_instances
         
     def _fetch_smartlocks(self):
         """Fetch all smartlocks and create Smartlock objects mapped by ID."""

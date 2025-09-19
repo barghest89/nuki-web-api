@@ -45,9 +45,11 @@ class SmartlockInstance:
         POST /smartlock/{smartlockId}/action
         """
         payload = {"action": action}
-        return self.client._request(
+        response =  self.client._request(
             "POST", f"/smartlock/{self.id}/action", json=payload
         )
+        self.refresh()
+        return response
 
     def lock(self, full: bool = False) -> Dict[str, Any]:
         """Lock or full lock the smartlock."""

@@ -2,15 +2,6 @@ import pytest
 from unittest.mock import patch, call
 from nukiwebapi import NukiWebAPI
 
-@pytest.fixture
-def client():
-    """Return a NukiWebAPI client with mocked _request."""
-    with patch.object(NukiWebAPI, "_request") as mock_request:
-        # First call for GET /smartlock during initialization returns empty list
-        mock_request.side_effect = [[]]
-        client = NukiWebAPI("FAKE_API_KEY")
-        yield client
-
 def test_list_account_users(client):
     with patch.object(client, "_request") as mock_request:
         mock_request.side_effect = [

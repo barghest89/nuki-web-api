@@ -1,3 +1,4 @@
 /pyproject.toml
 /.idea/*
 /.env
+/tests/test_basic_live_lock.py
