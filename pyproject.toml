@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nuki-web-api"
-version = "0.1.4post"
+version = "0.1.4"
 description = "A Python wrapper for the Nuki Web API"
 readme = "README.md"
 license = "MIT"
