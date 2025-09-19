@@ -10,6 +10,7 @@ jobs:
     env:
       NUKI_API_TOKEN: ${{ secrets.NUKI_API_TOKEN}}
       NUKI_SMARTLOCK_ID: ${{ secrets.NUKI_SMARTLOCK_ID}}
+      ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
 
     steps:
     - uses: actions/checkout@v4
@@ -27,7 +28,12 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest --maxfail=1 --disable-warnings -q --cov=nuki_web_api --cov-report=xml
+        pytest --maxfail=1 --disable-warnings -q --cov=nukiwebapi --cov-report=xml
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Install pypa/build
       run: >-
