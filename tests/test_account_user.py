@@ -76,7 +76,7 @@ def test_get_and_update_account_user(client, test_user):
 def test_delete_account_user(client):
     """Create a user and then delete it explicitly."""
     email = base_email()
-    user = client.account_user.create_account_user(email, "ToDelete", type=0, language="en")
+    user = client.account_user.create_account_user(email, "ToDelete", language="en")
     user_id = user["accountUserId"]
 
     deleted = client.account_user.delete_account_user(user_id)
