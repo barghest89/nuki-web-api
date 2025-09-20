@@ -1,66 +1,100 @@
+import os
+import random
+import string
 import pytest
-from unittest.mock import patch, call
-from nukiwebapi import NukiWebAPI
+from nukiwebapi.nuki_web_api import NukiWebAPI
 
-def test_list_account_users(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.side_effect = [
+API_TOKEN = os.getenv("NUKI_API_TOKEN")
+if not API_TOKEN:
+    pytest.skip("NUKI_API_TOKEN not set", allow_module_level=True)
 
-            [{"id": 1, "name": "Alice"}]  # GET /account/user
-        ]
-        account_users = client.account_user.list_account_users()
-        mock_request.assert_has_calls([
-            call("GET", "/account/user")
-        ])
-        assert isinstance(account_users, list)
-        assert account_users[0]["name"] == "Alice"
 
-def test_create_account_user(client):
-    user_data = {"name": "Bob"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.side_effect = [
+@pytest.fixture(scope="module")
+def client():
+    """Real API client."""
+    return NukiWebAPI(API_TOKEN)
 
-            {"status": "success"}  # PUT /account/user
-        ]
-        result = client.account_user.create_account_user(user_data)
-        mock_request.assert_has_calls([
-            call("PUT", "/account/user", json=user_data)
-        ])
-        assert result["status"] == "success"
 
-def test_get_account_user(client):
-    user_id = "123"
-    with patch.object(client, "_request") as mock_request:
-        mock_request.side_effect = [
-            {"id": user_id, "name": "Charlie"}  # GET /account/user/123
-        ]
-        result = client.account_user.get_account_user(user_id)
-        mock_request.assert_has_calls([
-            call("GET", f"/account/user/{user_id}")
-        ])
-        assert result["id"] == user_id
+def random_email():
+    """Generate a random test email."""
+    suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    return f"testuser_{suffix}@example.com"
 
-def test_update_account_user(client):
-    user_id = "456"
-    user_data = {"name": "Dana"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.side_effect = [
-            {"status": "success"}  # POST /account/user/456
-        ]
-        result = client.account_user.update_account_user(user_id, user_data)
-        mock_request.assert_has_calls([
-            call("POST", f"/account/user/{user_id}", json=user_data)
-        ])
-        assert result["status"] == "success"
+
+@pytest.fixture
+def test_user(client):
+    """Create a temporary user before test and delete after."""
+    email = random_email()
+    name = "Test User"
+    created = client.account_user.create_account_user(email, name, type=0, language="en")
+    user_id = created.get("accountUserId")
+
+    yield created  # provide user to the test
+
+    # Teardown: delete if still exists
+    try:
+        client.account_user.delete_account_user(user_id)
+    except Exception as e:
+        print(f"Teardown failed for user {user_id}: {e}")
+
+
+def test_create_account_user(client, test_user):
+    """Verify user was created and returned in list."""
+    assert "accountUserId" in test_user
+    listed = client.account_user.list_account_users()
+    ids = [u["accountUserId"] for u in listed]
+    assert test_user["accountUserId"] in ids
+
+
+def test_get_and_update_account_user(client, test_user):
+    """Get and update user details."""
+    user_id = test_user["accountUserId"]
+
+    # Get
+    fetched = client.account_user.get_account_user(user_id)
+    assert fetched["accountUserId"] == user_id
+    assert fetched["email"] == test_user["email"]
+
+    # Update
+    updated = client.account_user.update_account_user(
+        user_id,
+        email=test_user["email"],
+        name="Updated Name",
+        language="de"
+    )
+    assert updated["name"] == "Updated Name"
+    assert updated["language"] == "de"
+
 
 def test_delete_account_user(client):
-    user_id = "789"
-    with patch.object(client, "_request") as mock_request:
-        mock_request.side_effect = [
-            {"status": "success"}  # DELETE /account/user/789
-        ]
-        result = client.account_user.delete_account_user(user_id)
-        mock_request.assert_has_calls([
-            call("DELETE", f"/account/user/{user_id}")
-        ])
-        assert result["status"] == "success"
+    """Create a user and then delete it explicitly."""
+    email = random_email()
+    user = client.account_user.create_account_user(email, "ToDelete", type=0, language="en")
+    user_id = user["accountUserId"]
+
+    deleted = client.account_user.delete_account_user(user_id)
+    assert deleted.get("status") == "success"
+
+    # Verify it’s gone
+    users = client.account_user.list_account_users()
+    assert all(u["accountUserId"] != user_id for u in users)
+
+
+# -------------------
+# Validation tests
+# -------------------
+
+def test_invalid_type_rejected(client):
+    """Ensure invalid type raises ValueError (not sent to API)."""
+    with pytest.raises(ValueError, match="type must be 0 or 1"):
+        client.account_user.create_account_user(
+            random_email(), "BadType", type=99, language="en"
+        )
+
+
+def test_invalid_language_rejected(client):
+    """Ensure invalid language raises ValueError (not sent to API)."""
+    with pytest.raises(ValueError, match="language must be one of"):
+        client.account_user.create_account_user(
+            random_email(), "BadLang", type=0, language="xx"
+        )
