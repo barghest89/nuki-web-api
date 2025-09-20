@@ -31,7 +31,7 @@ def update_email():
 def test_user(client):
     """Create a temporary user before test and delete after."""
     email = base_email()
-    created = client.account_user.create_account_user(email, "Test User", type=0, language="en")
+    created = client.account_user.create_account_user(email, "Test User")
     user_id = created.get("accountUserId")
 
     yield created  # provide user to the test
