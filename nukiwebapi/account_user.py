@@ -34,7 +34,7 @@ class AccountUser:
         if type is not None:
             if type not in (0, 1):
                 raise ValueError("type must be 0 (user) or 1 (company)")
-            payload["type"] = type
+            payload["type"] = str(type)
 
         if language is not None:
             allowed_languages = {"en", "de", "es", "fr", "it", "nl", "cs", "sk"}
