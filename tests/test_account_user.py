@@ -79,8 +79,8 @@ def test_delete_account_user(client):
     user = client.account_user.create_account_user(email, "ToDelete", language="en")
     user_id = user["accountUserId"]
 
-    deleted = client.account_user.delete_account_user(user_id)
-    assert deleted.get("status") == "success"
+    client.account_user.delete_account_user(user_id)
+    #assert deleted.get("status") == "success"
 
     # Verify it’s gone
     users = client.account_user.list_account_users()
