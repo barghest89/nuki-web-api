@@ -11,7 +11,7 @@ jobs:
       NUKI_API_TOKEN: ${{ secrets.NUKI_API_TOKEN}}
       NUKI_SMARTLOCK_ID: ${{ secrets.NUKI_SMARTLOCK_ID}}
       ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
-
+      TEST_EMAIL_PREFIX: ${{ secrets.TEST_EMAIL_PREFIX }}
     steps:
     - uses: actions/checkout@v4
       with:
