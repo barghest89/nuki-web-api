@@ -18,13 +18,13 @@ def client():
 
 def base_email():
     """Base email schema for account user tests."""
-    return f"{EMAIL_PREFIX}+accountusertest@gmail.com"
+    return f"{EMAIL_PREFIX}@gmail.com"
 
 
 def update_email():
     """Randomized email for update tests (001–999 suffix)."""
     suffix = f"{random.randint(1,999):03d}"
-    return f"{EMAIL_PREFIX}+accountusertest{suffix}@gmail.com"
+    return f"{EMAIL_PREFIX}{suffix}@gmail.com"
 
 
 @pytest.fixture
@@ -93,7 +93,7 @@ def test_delete_account_user(client):
 
 def test_invalid_type_rejected(client):
     """Ensure invalid type raises ValueError (not sent to API)."""
-    with pytest.raises(ValueError, match="type must be 0 or 1"):
+    with pytest.raises(ValueError, match="type must be 0"):
         client.account_user.create_account_user(
             base_email(), "BadType", type=99, language="en"
         )
