@@ -51,13 +51,13 @@ class AccountUser:
         """
         return self.client._request("GET", f"/account/user/{account_user_id}")
 
-    def update_account_user(self, account_user_id: str, email: str, name: str, language: str):
+    def update_account_user(self, account_user_id: int, email: str, name: str, language: str):
         """Update details of a specific account user.
 
         POST /account/user/{accountUserId}
 
         Args:
-            account_user_id (str): ID of the account user to update.
+            account_user_id (int): ID of the account user to update.
             email (str): New email (mandatory).
             name (str): New name (mandatory).
             language (str): Language code (mandatory).
