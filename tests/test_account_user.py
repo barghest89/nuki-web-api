@@ -4,7 +4,7 @@ import pytest
 from nukiwebapi.nuki_web_api import NukiWebAPI
 
 API_TOKEN = os.getenv("NUKI_API_TOKEN")
-EMAIL_PREFIX = os.getenv("TEST_EMAIL_PREFIX")  # e.g. "blachosf"
+EMAIL_PREFIX = os.getenv("TEST_EMAIL_PREFIX")
 
 if not API_TOKEN or not EMAIL_PREFIX:
     pytest.skip("NUKI_API_TOKEN or TEST_EMAIL_PREFIX not set", allow_module_level=True)
