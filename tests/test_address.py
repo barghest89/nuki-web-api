@@ -1,93 +1,131 @@
-from unittest.mock import patch, call
+import os
+import random
+import pytest
+from nukiwebapi import NukiWebAPI
+
+API_TOKEN = os.getenv("NUKI_API_TOKEN")
+SMARTLOCK_ID = int(os.getenv("NUKI_SMARTLOCK_ID", "0"))  # required for address create
 
 
-def test_list_addresses(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"id": 1, "street": "Main St"}]
-        addresses = client.address.list_addresses()
-
-        mock_request.assert_has_calls([
-            call("GET", "/address")
-        ])
-        assert isinstance(addresses, list)
-        assert addresses[0]["street"] == "Main St"
+@pytest.fixture
+def client():
+    return NukiWebAPI(API_TOKEN)
 
 
-def test_create_address(client):
-    new_address = {"street": "Broadway", "city": "NY"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"id": 42, **new_address}
-        result = client.address.create_address(new_address)
+@pytest.fixture
+def test_address(client):
+    """Create an address for testing and tear it down after."""
+    name = f"pytest_address_{random.randint(100, 999)}"
+    addr = client.address.create_address(name=name, smartlock_ids=[SMARTLOCK_ID])
+    addr_id = addr.get("addressId")
+    assert addr_id, f"Failed to create test address: {addr}"
 
-        mock_request.assert_has_calls([
-            call("PUT", "/address", json=new_address)
-        ])
-        assert result["id"] == 42
+    yield addr
 
-
-def test_update_address(client):
-    updated = {"street": "Elm St"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        result = client.address.update_address(123, updated)
-
-        mock_request.assert_has_calls([
-            call("POST", "/address/123", json=updated)
-        ])
-        assert result["status"] == "success"
+    # cleanup
+    try:
+        client.address.delete_address(addr_id)
+    except Exception as e:
+        print(f"[WARN] Cleanup failed for address {addr_id}: {e}")
 
 
-def test_delete_address(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "deleted"}
-        result = client.address.delete_address(123)
+def test_create_and_get_address(client, test_address):
+    """Create address and fetch it via list."""
+    addr_id = test_address["addressId"]
 
-        mock_request.assert_has_calls([
-            call("DELETE", "/address/123")
-        ])
-        assert result["status"] == "deleted"
+    addresses = client.address.list_addresses()
+    assert any(a["addressId"] == addr_id for a in addresses)
 
 
-def test_list_address_units(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"unitId": "A1"}]
-        result = client.address.list_address_units(123)
+def test_update_address(client, test_address):
+    """Update address with new name and settings."""
+    addr_id = test_address["addressId"]
+    new_name = f"updated_{random.randint(100,999)}"
+    settings = {"timezone": "UTC"}
 
-        mock_request.assert_has_calls([
-            call("GET", "/address/123/unit")
-        ])
-        assert result[0]["unitId"] == "A1"
+    updated = client.address.update_address(
+        addr_id, name=new_name, smartlock_ids=[SMARTLOCK_ID], settings=settings
+    )
 
-
-def test_create_address_unit(client):
-    unit_data = {"name": "Unit 1"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"id": "U1", **unit_data}
-        result = client.address.create_address_unit(123, unit_data)
-
-        mock_request.assert_has_calls([
-            call("PUT", "/address/123/unit", json=unit_data)
-        ])
-        assert result["id"] == "U1"
+    assert updated["name"] == new_name
+    assert "settings" in updated
 
 
-def test_delete_address_units(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "all_deleted"}
-        result = client.address.delete_address_units(123)
+def test_create_and_delete_address_unit(client, test_address):
+    """Create, list and delete a unit for the address."""
+    addr_id = test_address["addressId"]
+    unit_name = f"unit_{random.randint(100,999)}"
 
-        mock_request.assert_has_calls([
-            call("DELETE", "/address/123/unit")
-        ])
-        assert result["status"] == "all_deleted"
+    created = client.address.create_address_unit(addr_id, name=unit_name)
+    unit_id = created.get("id")
+    assert unit_id, f"Failed to create unit: {created}"
+
+    # list should contain it
+    units = client.address.list_address_units(addr_id)
+    assert any(u["id"] == unit_id for u in units)
+
+    # delete single
+    client.address.delete_address_unit(addr_id, unit_id)
+    units_after = client.address.list_address_units(addr_id)
+    assert all(u["id"] != unit_id for u in units_after)
 
 
-def test_delete_address_unit(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "deleted"}
-        result = client.address.delete_address_unit(123, "U1")
+def test_delete_address_units_bulk(client, test_address):
+    """Create multiple units and delete them in bulk."""
+    addr_id = test_address["addressId"]
 
-        mock_request.assert_has_calls([
-            call("DELETE", "/address/123/unit/U1")
-        ])
-        assert result["status"] == "deleted"
+    ids = []
+    for i in range(2):
+        created = client.address.create_address_unit(addr_id, name=f"bulk_unit_{i}")
+        ids.append(created["id"])
+
+    assert len(ids) == 2
+
+    client.address.delete_address_units(addr_id, ids)
+
+    remaining = client.address.list_address_units(addr_id)
+    for uid in ids:
+        assert all(u["id"] != uid for u in remaining)
+
+
+# --- Invalid input tests ---
+
+def test_create_address_invalid_input(client):
+    with pytest.raises(ValueError):
+        client.address.create_address("", [SMARTLOCK_ID])
+    with pytest.raises(ValueError):
+        client.address.create_address("bad", ["not-an-int"])
+
+
+def test_update_address_invalid_input(client, test_address):
+    addr_id = test_address["addressId"]
+    with pytest.raises(ValueError):
+        client.address.update_address("not-an-int", name="bad")
+    with pytest.raises(ValueError):
+        client.address.update_address(addr_id, smartlock_ids=["bad"])
+    with pytest.raises(ValueError):
+        client.address.update_address(addr_id, settings="not-a-dict")
+
+
+def test_create_address_unit_invalid_input(client, test_address):
+    addr_id = test_address["addressId"]
+    with pytest.raises(ValueError):
+        client.address.create_address_unit("not-an-int", "name")
+    with pytest.raises(ValueError):
+        client.address.create_address_unit(addr_id, "")
+
+
+def test_delete_address_units_invalid_input(client, test_address):
+    addr_id = test_address["addressId"]
+    with pytest.raises(ValueError):
+        client.address.delete_address_units("bad", ["id"])
+    with pytest.raises(ValueError):
+        client.address.delete_address_units(addr_id, [123])  # must be str IDs
+
+
+def test_delete_address_unit_invalid_input(client, test_address):
+    addr_id = test_address["addressId"]
+    with pytest.raises(ValueError):
+        client.address.delete_address_unit("bad", "id")
+    with pytest.raises(ValueError):
+        client.address.delete_address_unit(addr_id, 123)
