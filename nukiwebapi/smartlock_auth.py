@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 
@@ -18,22 +19,20 @@ class SmartlockAuth:
     def create_auth(
         self,
         name: str,
-        allowed_from_date: str,
-        allowed_until_date: str,
-        allowed_week_days: int,
-        allowed_from_time: int,
-        allowed_until_time: int,
-        account_user_id: int,
-        smartlock_ids: list[int],
         remote_allowed: bool,
-        smart_actions_enabled: bool,
-        type: int = 0,
-        code: int | None = None,
+        type: int = 13,  # default to keypad for special case
+        allowed_from_date: str = "1970-01-01T00:00:00Z",
+        allowed_until_date: str = "2099-12-31T23:59:59Z",
+        allowed_week_days: int = 127,
+        allowed_from_time: int = 0,
+        allowed_until_time: int = 1440,
+        account_user_id: int = 0,
+        smart_actions_enabled: bool = False,
+        code: int = 0,
+        smartlock_ids: Optional[list[int]] = None
     ) -> Dict[str, Any]:
-        """Creates asynchronous smartlock authorizations.
+        """Creates a smartlock authorization. Only `name` and `remote_allowed` are required."""
 
-        PUT /smartlock/auth
-        """
         payload = {
             "name": name,
             "allowedFromDate": allowed_from_date,
@@ -42,20 +41,21 @@ class SmartlockAuth:
             "allowedFromTime": allowed_from_time,
             "allowedUntilTime": allowed_until_time,
             "accountUserId": account_user_id,
-            "smartlockIds": smartlock_ids,
             "remoteAllowed": remote_allowed,
             "smartActionsEnabled": smart_actions_enabled,
             "type": type,
+            "code": code,
         }
-        if type == 13 and code is not None:
-            payload["code"] = code
+
+        if smartlock_ids is not None:
+            payload["smartlockIds"] = smartlock_ids
 
         return self.client._request("PUT", "/smartlock/auth", json=payload)
 
     def update_auth(self, auth_data: Dict[str, Any]) -> Dict[str, Any]:
         """Updates smartlock authorizations asynchronously.
 
-        POST smartlock/auth
+        POST /smartlock/auth
         """
         return self.client._request("POST", "/smartlock/auth", json=auth_data)
 
