@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 class SmartlockAuth:
@@ -15,17 +15,47 @@ class SmartlockAuth:
         """
         return self.client._request("GET", "/smartlock/auth")
 
-    def create_auth(self, auth_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_auth(
+        self,
+        name: str,
+        allowed_from_date: str,
+        allowed_until_date: str,
+        allowed_week_days: int,
+        allowed_from_time: int,
+        allowed_until_time: int,
+        account_user_id: int,
+        smartlock_ids: list[int],
+        remote_allowed: bool,
+        smart_actions_enabled: bool,
+        type: int = 0,
+        code: int | None = None,
+    ) -> Dict[str, Any]:
         """Creates asynchronous smartlock authorizations.
 
         PUT /smartlock/auth
         """
-        return self.client._request("PUT", "/smartlock/auth", json=auth_data)
+        payload = {
+            "name": name,
+            "allowedFromDate": allowed_from_date,
+            "allowedUntilDate": allowed_until_date,
+            "allowedWeekDays": allowed_week_days,
+            "allowedFromTime": allowed_from_time,
+            "allowedUntilTime": allowed_until_time,
+            "accountUserId": account_user_id,
+            "smartlockIds": smartlock_ids,
+            "remoteAllowed": remote_allowed,
+            "smartActionsEnabled": smart_actions_enabled,
+            "type": type,
+        }
+        if type == 13 and code is not None:
+            payload["code"] = code
+
+        return self.client._request("PUT", "/smartlock/auth", json=payload)
 
     def update_auth(self, auth_data: Dict[str, Any]) -> Dict[str, Any]:
         """Updates smartlock authorizations asynchronously.
 
-        POST /smartlock/auth
+        POST smartlock/auth
         """
         return self.client._request("POST", "/smartlock/auth", json=auth_data)
 
@@ -58,29 +88,6 @@ class SmartlockAuth:
         """
         return self.client._request("PUT", f"/smartlock/{smartlock_id}/auth", json=auth_data)
 
-    def update_auths_for_smartlock(self, smartlock_id: str, updates: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Update multiple smartlock authorizations for a smartlock.
-
-        POST /smartlock/{smartlockId}/auth
-
-        Args:
-            smartlock_id (str): The smartlock ID.
-            updates (list[dict]): List of SmartlockAuthMultiUpdate objects.
-
-        Required fields in each update:
-            - id (str): unique ID of the auth
-            - name (str): name of the authorization
-        """
-        if not isinstance(smartlock_id, (str, int)):
-            raise ValueError("smartlock_id must be a string or integer")
-        if not isinstance(updates, list) or not all(isinstance(u, dict) for u in updates):
-            raise ValueError("updates must be a list of dicts")
-        for u in updates:
-            if "id" not in u or "name" not in u:
-                raise ValueError("each update must include 'id' and 'name'")
-
-        return self.client._request("POST", f"/smartlock/{smartlock_id}/auth", json=updates)
-
     def generate_shared_key_auth(self, smartlock_id: str, auth_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a new smartlock auth with a shared key.
 
@@ -102,9 +109,7 @@ class SmartlockAuth:
 
         POST /smartlock/{smartlockId}/auth/{id}
         """
-        return self.client._request(
-            "POST", f"/smartlock/{smartlock_id}/auth/{auth_id}", json=auth_data
-        )
+        return self.client._request("POST", f"/smartlock/{smartlock_id}/auth/{auth_id}", json=auth_data)
 
     def delete_smartlock_auth(self, smartlock_id: str, auth_id: str) -> Dict[str, Any]:
         """Deletes a specific smartlock authorization asynchronously.
@@ -112,4 +117,3 @@ class SmartlockAuth:
         DELETE /smartlock/{smartlockId}/auth/{id}
         """
         return self.client._request("DELETE", f"/smartlock/{smartlock_id}/auth/{auth_id}")
-        
