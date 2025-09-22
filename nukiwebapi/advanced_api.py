@@ -12,12 +12,38 @@ class AdvancedApi:
         """
         return self.client._request("GET", "/api/decentralWebhook")
 
-    def create_decentral_webhook(self, webhook_data):
-        """Create a new decentral webhook.
+    def create_decentral_webhook(self, webhook_url: str, webhook_features: list[str]):
+        """
+        Create a new decentral webhook.
 
         PUT /api/decentralWebhook
+
+        Args:
+            webhook_url (str): The HTTPS URL where webhooks should point to (required).
+            webhook_features (list[str]): List of features to trigger webhooks. Must be subset of:
+                ["DEVICE_STATUS", "DEVICE_MASTERDATA", "DEVICE_CONFIG",
+                 "DEVICE_LOGS", "DEVICE_AUTHS", "ACCOUNT_USER"]
+
+        Returns:
+            dict: API response
         """
-        return self.client._request("PUT", "/api/decentralWebhook", json=webhook_data)
+        if not webhook_url.startswith("https://"):
+            raise ValueError("webhook_url must start with https://")
+
+        allowed_features = {
+            "DEVICE_STATUS", "DEVICE_MASTERDATA", "DEVICE_CONFIG",
+            "DEVICE_LOGS", "DEVICE_AUTHS", "ACCOUNT_USER"
+        }
+
+        if not isinstance(webhook_features, list) or not all(f in allowed_features for f in webhook_features):
+            raise ValueError(f"webhook_features must be a list containing only allowed values: {allowed_features}")
+
+        payload = {
+            "webhookUrl": webhook_url,
+            "webhookFeatures": list(set(webhook_features))  # unique
+        }
+
+        return self.client._request("PUT", "/api/decentralWebhook", json=payload)
 
     def delete_decentral_webhook(self, webhook_id):
         """Unregister a decentral webhook.
