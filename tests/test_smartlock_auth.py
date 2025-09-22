@@ -1,99 +1,135 @@
-from unittest.mock import patch, call
+# tests/test_smartlock_auth_integration.py
+import os
+import random
+from time import sleep
+
 import pytest
+
+from dotenv import load_dotenv
+
+from nukiwebapi import NukiWebAPI
+
+load_dotenv()  # looks for .env in cwd
+
+API_TOKEN = os.getenv("NUKI_API_TOKEN")
+SMARTLOCK_ID = int(os.getenv("NUKI_SMARTLOCK_ID"))
+ACCOUNT_ID = int(os.getenv("NUKI_ACCOUNT_USER_ID") ) # existing account user for tests
+
+@pytest.fixture
+def client():
+    return NukiWebAPI(API_TOKEN)
 
 
 def test_list_auths(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"id": 1}]
-        result = client.smartlock_auth.list_auths()
-        mock_request.assert_called_once_with("GET", "/smartlock/auth")
-        assert result[0]["id"] == 1
+    """Test listing all authorizations."""
+    auths = client.smartlock_auth.list_auths()
+    assert auths is not None
 
 
-def test_create_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"user": "alice"}
-        result = client.smartlock_auth.create_auth(data)
-        mock_request.assert_called_once_with("PUT", "/smartlock/auth", json=data)
-        assert result["status"] == "success"
+def test_create_update_delete_auth(client):
+    """Test updating a single auth."""
+    name = "HelloWorld234"
+    client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
+                                                     allowed_from_date="2025-09-21T21:50:33.306Z",
+                                                     allowed_until_date="2026-09-21T21:50:33.306Z", allowed_week_days=127,
+                                                     allowed_from_time=0,
+                                                     allowed_until_time=0, account_user_id=707629236, remote_allowed=True,
+                                                     smart_actions_enabled=True, type=0)
+    sleep(3)
+    auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
+    auth_id=None
+    for auth_instance in auths:
+        if auth_instance["name"] == name:
+            # we found our just created id
+            auth_id = auth_instance["id"]
+    assert auth_id is not None
+    new_name = f"updated_{random.randint(1000,9999)}"
+
+    auth_instance = client.smartlock_auth.get_smartlock_auth(smartlock_id=SMARTLOCK_ID, auth_id=auth_id)
+    assert auth_instance is not None
+    client.smartlock_auth.update_auth(smartlockId=SMARTLOCK_ID,
+            id=auth_id,
+            name=new_name,
+            remote_allowed=False
+    )
+    sleep(5)
+    new_auth_instance = client.smartlock_auth.get_smartlock_auth(smartlock_id=SMARTLOCK_ID, auth_id=auth_id)
+
+    assert new_auth_instance["name"] == new_name and new_auth_instance["remoteAllowed"] == False
+    teardown(client)
 
 
-def test_update_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"user": "bob"}
-        result = client.smartlock_auth.update_auth(data)
-        mock_request.assert_called_once_with("POST", "/smartlock/auth", json=data)
-        assert result["status"] == "success"
+def test_bulk_update_auth(client):
+    """Test bulk updating auths."""
+    name = "HelloWorld234"
+    client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
+                                                     allowed_from_date="2025-09-21T21:50:33.306Z",
+                                                     allowed_until_date="2026-09-21T21:50:33.306Z", allowed_week_days=127,
+                                                     allowed_from_time=0,
+                                                     allowed_until_time=0, account_user_id=707629236, remote_allowed=True,
+                                                     smart_actions_enabled=True, type=0)
+
+    name = "HelloWorld456"
+    client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
+                                                     allowed_from_date="2025-09-21T21:50:33.306Z",
+                                                     allowed_until_date="2026-09-21T21:50:33.306Z", allowed_week_days=127,
+                                                     allowed_from_time=0,
+                                                     allowed_until_time=0, remote_allowed=True,
+                                                     smart_actions_enabled=True, type=13, code=245869)
+
+    sleep(3)
+    auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
+    auth_list = []
+    i = 1
+    for auth_instance in auths:
+        if auth_instance["name"].startswith("HelloWorld"):
+            # we found our just created id
+            auth_list.append(
+            {
+                "id": auth_instance["id"],  # existing auth ID
+                "name": f"Updated Bulk Name {i}",
+                "enabled": True,
+                "remoteAllowed": True,
+                "allowedFromDate": "2025-09-21T12:00:00Z",
+                "allowedUntilDate": "2025-09-30T12:00:00Z",
+            })
+        i += 1
+
+    assert len(auth_list) > 0
+
+    client.smartlock_auth.update_auth_bulk(auth_list)
+    sleep(5)
+    auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
+    for auth_instance in auths:
+        assert not auth_instance["name"].startswith("HelloWorld")
+
+    teardown(client)
+
+def teardown(client):
+    name1 = "HelloWorld"
+    name2 = "updated_"
+    name3 = "Updated Bulk"
+    auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
+    for auth_instance in auths:
+        if auth_instance["name"].startswith(name1) or auth_instance["name"].startswith(name2) or auth_instance["name"].startswith(name3):
+            # we found our just created id
+            auth_id = auth_instance["id"]
+            client.smartlock_auth.delete_auth(auth_id)
+            print(f"deleted auth_instance {auth_instance['name']} with id {auth_id}.")
 
 
-def test_delete_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"id": 1}
-        result = client.smartlock_auth.delete_auth(data)
-        mock_request.assert_called_once_with("DELETE", "/smartlock/auth", json=data)
-        assert result["status"] == "success"
-
-
-def test_list_auths_paged(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"page": 1, "items": []}
-        params = {"limit": 10}
-        result = client.smartlock_auth.list_auths_paged(params)
-        mock_request.assert_called_once_with("GET", "/smartlock/auth/paged", params=params)
-        assert result["page"] == 1
-
-
-def test_list_auths_for_smartlock(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"id": 2}]
-        result = client.smartlock_auth.list_auths_for_smartlock("123")
-        mock_request.assert_called_once_with("GET", "/smartlock/123/auth")
-        assert result[0]["id"] == 2
-
-
-def test_create_auth_for_smartlock(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"user": "alice"}
-        result = client.smartlock_auth.create_auth_for_smartlock("123", data)
-        mock_request.assert_called_once_with("PUT", "/smartlock/123/auth", json=data)
-        assert result["status"] == "success"
-
-
+"""
+Not testable at the moment
 def test_generate_shared_key_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"key": "xyz"}
-        result = client.smartlock_auth.generate_shared_key_auth("123", data)
-        mock_request.assert_called_once_with(
-            "POST", "/smartlock/123/auth/advanced/sharedkey", json=data
-        )
-        assert result["status"] == "success"
-
-
-def test_get_smartlock_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"id": "auth1"}
-        result = client.smartlock_auth.get_smartlock_auth("123", "auth1")
-        mock_request.assert_called_once_with("GET", "/smartlock/123/auth/auth1")
-        assert result["id"] == "auth1"
-
-
-def test_update_smartlock_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        data = {"user": "bob"}
-        result = client.smartlock_auth.update_smartlock_auth("123", "auth1", data)
-        mock_request.assert_called_once_with("POST", "/smartlock/123/auth/auth1", json=data)
-        assert result["status"] == "success"
-
-
-def test_delete_smartlock_auth(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-        result = client.smartlock_auth.delete_smartlock_auth("123", "auth1")
-        mock_request.assert_called_once_with("DELETE", "/smartlock/123/auth/auth1")
-        assert result["status"] == "success"
+    #Test creating a shared key auth.
+    
+    name = f"shared_key_{random.randint(1000,9999)}"
+    auth = client.smartlock_auth.generate_shared_key_auth(
+        smartlock_id=SMARTLOCK_ID,
+        name=name
+    )
+    auth_id = auth.get("id")
+    assert auth_id
+    # cleanup
+    client.smartlock_auth.delete_smartlock_auth(SMARTLOCK_ID, auth_id)
+"""
