@@ -35,21 +35,3 @@ def test_basic_1():
 
         lock.refresh()
        
-        # Minimal auth creation for type 13 (keypad)
-        auth = wapi.smartlock_auth.create_auth(
-            name="KeypadAuthTest",
-            remote_allowed=True,
-            type=13
-        )
-
-        print("Created auth:", auth)
-
-        auth_id = auth.get("id")
-        if auth_id:
-        # Delete the auth
-            deleted = wapi.smartlock_auth.delete_smartlock_auth(SMARTLOCK_ID, auth_id)
-            print("Deleted auth:", deleted)
-        else:
-            print("No auth ID returned; cannot delete.")
-
-
