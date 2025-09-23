@@ -77,7 +77,7 @@ def test_bulk_update_auth(client):
                                                      allowed_until_time=0, remote_allowed=True,
                                                      smart_actions_enabled=True, type=13, code=245869)
 
-    sleep(3)
+    sleep(5)
     auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
     auth_list = []
     i = 1

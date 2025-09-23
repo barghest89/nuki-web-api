@@ -2,3 +2,4 @@
 /.idea/*
 /.env
 /tests/test_basic_live_lock.py
+/tests/nuki_test_local.py

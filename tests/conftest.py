@@ -5,12 +5,14 @@ from nukiwebapi.nuki_web_api import NukiWebAPI
 
 
 
-def _default_response(method: str, endpoint: str, **kwargs):
+def _default_response(method: str, endpoint: str, json = None, **kwargs):
     """Return a safe default response for any endpoint."""
     json_data = kwargs.get("json") or {}
 
-    # fallback
-    return {"status": "success", **json_data}
+    if isinstance(json, list):
+        return {"status": "success", "ids": json}
+
+    return {"status": "success", **(json or {})}
 
 @pytest.fixture
 def client():

@@ -14,15 +14,31 @@ def test_list_decentral_webhooks(client):
 
 
 def test_create_decentral_webhook(client):
-    data = {"url": "https://example.com/webhook"}
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "created"}
-        result = client.advanced_api.create_decentral_webhook(data)
+    url = "https://example.com/webhook"
+    features = [
+        "DEVICE_CONFIG",
+        "ACCOUNT_USER",
+        "DEVICE_STATUS",
+        "DEVICE_LOGS",
+        "DEVICE_AUTHS",
+        "DEVICE_MASTERDATA",
+    ]
 
-        mock_request.assert_has_calls([
-            call("PUT", "/api/decentralWebhook", json=data)
-        ])
-        assert result["status"] == "created"
+    result = client.advanced_api.create_decentral_webhook(url, features)
+    assert result["status"] == "success"
+
+    # Ensure the mock was called
+    assert client._mock_request.called
+    args, kwargs = client._mock_request.call_args
+
+    # Unpack safely
+    method, endpoint = args
+    payload = kwargs["json"]
+
+    assert method == "PUT"
+    assert endpoint == "/api/decentralWebhook"
+    assert payload["webhookUrl"] == url
+    assert set(payload["webhookFeatures"]) == set(features)
 
 
 def test_delete_decentral_webhook(client):
