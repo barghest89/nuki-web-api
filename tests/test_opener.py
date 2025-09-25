@@ -33,7 +33,7 @@ def test_list_intercoms(client):
         result = client.opener.list_intercoms()
 
         mock_request.assert_has_calls([
-            call("GET", "/opener/intercom")
+            call("GET", "/opener/intercom", params = None)
         ])
         assert isinstance(result, list)
         assert result[0]["id"] == "i1"

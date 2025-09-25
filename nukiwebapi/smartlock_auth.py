@@ -127,7 +127,7 @@ class SmartlockAuth:
 
         GET /smartlock/{smartlockId}/auth
         """
-        return self.client._request("GET", f"/smartlock/{smartlock_id}/auth")
+        return self.client._request("GET", f"/smartlock/{smartlock_id}/auth").json()
 
     #TODO add test case
     def create_auth_for_smartlock(
@@ -208,7 +208,7 @@ class SmartlockAuth:
 
         GET /smartlock/{smartlockId}/auth/{id}
         """
-        return self.client._request("GET", f"/smartlock/{smartlock_id}/auth/{auth_id}")
+        return self.client._request("GET", f"/smartlock/{smartlock_id}/auth/{auth_id}").json()
 
     def update_smartlock_auth(
         self,
@@ -251,7 +251,7 @@ class SmartlockAuth:
 
         return self.client._request(
             "POST", f"/smartlock/{smartlock_id}/auth/{auth_id}", json=payload
-        )
+        ).json()
 
     def delete_smartlock_auth(self, smartlock_id: int, auth_id: str) -> Dict[str, Any]:
         """Delete a specific smartlock authorization asynchronously.

@@ -28,14 +28,20 @@ def test_list_auths(client):
 
 def test_create_update_delete_auth(client):
     """Test updating a single auth."""
-    name = "HelloWorld234"
-    client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
+
+    teardown(client)
+    created = client.account_user.create_account_user("testemail@example.com", "Test User")
+    user_id = created.get("accountUserId")
+    name = "Test_Auth"
+    created = client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
                                                      allowed_from_date="2025-09-21T21:50:33.306Z",
                                                      allowed_until_date="2026-09-21T21:50:33.306Z", allowed_week_days=127,
                                                      allowed_from_time=0,
-                                                     allowed_until_time=0, account_user_id=707629236, remote_allowed=True,
+                                                     allowed_until_time=0, account_user_id=user_id, remote_allowed=True,
                                                      smart_actions_enabled=True, type=0)
-    sleep(3)
+
+
+    sleep(7)
     auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
     auth_id=None
     for auth_instance in auths:
@@ -52,7 +58,8 @@ def test_create_update_delete_auth(client):
             name=new_name,
             remote_allowed=False
     )
-    sleep(5)
+    sleep(7)
+
     new_auth_instance = client.smartlock_auth.get_smartlock_auth(smartlock_id=SMARTLOCK_ID, auth_id=auth_id)
 
     assert new_auth_instance["name"] == new_name and new_auth_instance["remoteAllowed"] == False
@@ -61,6 +68,8 @@ def test_create_update_delete_auth(client):
 
 def test_bulk_update_auth(client):
     """Test bulk updating auths."""
+    teardown(client)
+
     name = "HelloWorld234"
     client.smartlock_auth.create_auth_for_smartlocks(smartlock_ids=[SMARTLOCK_ID], name=name,
                                                      allowed_from_date="2025-09-21T21:50:33.306Z",
@@ -106,12 +115,11 @@ def test_bulk_update_auth(client):
     teardown(client)
 
 def teardown(client):
-    name1 = "HelloWorld"
-    name2 = "updated_"
-    name3 = "Updated Bulk"
+    prefixes = ("HelloWorld", "updated_", "Updated Bulk", "Test_Auth")
+
     auths = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID)
     for auth_instance in auths:
-        if auth_instance["name"].startswith(name1) or auth_instance["name"].startswith(name2) or auth_instance["name"].startswith(name3):
+        if auth_instance["name"].startswith(prefixes):
             # we found our just created id
             auth_id = auth_instance["id"]
             client.smartlock_auth.delete_auth(auth_id)

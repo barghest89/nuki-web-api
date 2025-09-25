@@ -1,29 +1,79 @@
 # tests/test_account.py
+import os
+import random
+import string
+from time import sleep, time
+
 import pytest
 from unittest.mock import patch, call
+
+import requests
+from dotenv import load_dotenv
+import pyotp
+
 from nukiwebapi import NukiWebAPI
 
+load_dotenv()  # looks for .env in cwd
+API_TOKEN = os.getenv("NUKI_API_TOKEN")
+SMARTLOCK_ID = os.getenv("NUKI_SMARTLOCK_ID")
+TEST_EMAIL_PREFIX = os.getenv("TEST_EMAIL_PREFIX")
+ORIGINAL_EMAIL_PREFIX = os.getenv("ORIGINAL_EMAIL_PREFIX")
+
+
+def test_account_update(nuki_client):
+    nuki_client.account.update(language="en", email=f"{TEST_EMAIL_PREFIX}@gmail.com")
+    nuki_client.account.update(language="de", email=f"{ORIGINAL_EMAIL_PREFIX}@gmail.com")
+    account_data = nuki_client.account.get()
+    assert account_data["email"] == f"{ORIGINAL_EMAIL_PREFIX}@gmail.com"
+    assert account_data["language"] == "de"
 
 
 
 # ---- OTP tests ----
-def test_enable_otp(client):
-    result = client.account.enable_otp()
-    client._mock_request.assert_called_with("POST", "/account/otp")
-    assert result["status"] == "success"
+def test_otp_lifecycle_integration(nuki_client):
+    acc = nuki_client.account.get()
+    config = acc.get("config", {})
+    if acc.get("config", {}).get("otpEnabledDate") is not None:
+        nuki_client.account.disable_otp()  # Disable first to ensure test status is always the same
+
+    # Step 1: Create OTP secret
+    secret = nuki_client.account.create_otp()
+    assert isinstance(secret, str)
+    assert len(secret) > 10
+
+    # Step 2: Generate TOTP from secret (done only in the test!)
+    totp = pyotp.TOTP(secret)
+
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        code = totp.now()
 
 
-def test_create_otp(client):
-    data = {"method": "totp"}
-    result = client.account.create_otp(data)
-    client._mock_request.assert_called_with("PUT", "/account/otp", json=data)
-    assert result["status"] == "success"
+    # Step 3: Enable OTP using generated code
+        try:
+            response = nuki_client.account.enable_otp(code)
+            if response.status_code == 204:
+                return True  # success
+            elif response.status_code == 401:
+                # Wrong OTP → maybe timing issue
+                if attempt < max_retries:
+                    time.sleep(1)  # wait a second and retry
+                    continue
+                else:
+                    raise RuntimeError("OTP rejected after max retries")
+            else:
+                response.raise_for_status()
+        except requests.RequestException as e:
+            if attempt == max_retries:
+                raise
 
-
-def test_disable_otp(client):
-    result = client.account.disable_otp()
-    client._mock_request.assert_called_with("DELETE", "/account/otp")
-    assert result["status"] == "success"
+    acc = nuki_client.account.get()
+    # Step 4: Disable OTP
+    assert acc.get("config", {}).get("otpEnabledDate") is not None
+    disabled = nuki_client.account.disable_otp()
+    acc = nuki_client.account.get()
+    assert acc.get("config", {}).get("otpEnabledDate") is None
+    return None
 
 
 # ---- Password reset ----
@@ -41,75 +91,81 @@ def test_reset_password(client):
 
 
 # ---- Account settings ----
-def test_get_setting(client):
-    result = client.account.get_setting()
-    client._mock_request.assert_called_with("GET", "/account/setting")
-    assert result["status"] == "success"
+
+def test_update_delete_account_setting_nuki_banner(nuki_client):
 
 
-def test_update_setting(client):
-    data = {"theme": "dark"}
-    result = client.account.update_setting(data)
-    client._mock_request.assert_called_with("PUT", "/account/setting", json=data)
-    assert result["status"] == "success"
+    setting = True
+    """Test updating account setting: Nuki Club banner dismissed flag."""
+    # Prepare payload
+    payload = {
+        "web": {
+            "nukiClubDismissed": setting
+        }
+    }
 
+    # Update/create the setting
+    result = nuki_client.account.update_setting(payload)
+    assert isinstance(result, dict)
+    # Nuki API usually echoes the updated structure back
+    assert "web" in result
+    assert result["web"].get("nukiClubDismissed") is setting
 
-def test_delete_setting(client):
-    key = "theme"
-    result = client.account.delete_setting(key)
-    client._mock_request.assert_called_with("DELETE", "/account/setting", json={"key": key})
-    assert result["status"] == "success"
+    # Fetch to verify persistence
+    fetched = nuki_client.account.get_setting()
+    assert isinstance(fetched, dict)
+    assert "web" in fetched
+    assert fetched["web"].get("nukiClubDismissed") is setting
+    nuki_client.account.delete_setting()
 
 
 # ---- Sub-account management ----
-def test_list_sub_accounts(client):
-    result = client.account.list_sub_accounts()
-    client._mock_request.assert_called_with("GET", "/account/sub")
-    assert result["status"] == "success"
+def test_create_update_delete_list_sub_accounts(nuki_client):
 
+    email = f"test{str(random.randint(1, 999))}@gmail.com"
 
-def test_create_sub_account(client):
-    data = {"name": "SubUser"}
-    result = client.account.create_sub_account(data)
-    client._mock_request.assert_called_with("PUT", "/account/sub", json=data)
-    assert result["status"] == "success"
+    profile_data = {
+        "firstName": "Alice",
+        "lastName": "Tester",
+        "address": "42 Integration Road",
+        "zip": "12345",
+        "city": "Testville",
+        "country": "DE"
+    }
 
+    response = nuki_client.account.create_sub_account(
+        email=email,
+        password="securePass123",
+        name="Integration Test Sub",
+        rights=31,
+        language="de",
+        profile=profile_data
+    )
 
-def test_get_sub_account(client):
-    account_id = "abc123"
-    result = client.account.get_sub_account(account_id)
-    client._mock_request.assert_called_with("GET", f"/account/sub/{account_id}")
-    assert result["status"] == "success"
+    # Assertions based on expected structure
+    assert "accountId" in response
+    account_id = response["accountId"]
 
-
-def test_update_sub_account(client):
-    account_id = "abc123"
     data = {"name": "Updated"}
-    result = client.account.update_sub_account(account_id, data)
-    client._mock_request.assert_called_with("POST", f"/account/sub/{account_id}", json=data)
-    assert result["status"] == "success"
+
+    nuki_client.account.update_sub_account(account_id, data)
+
+    account = nuki_client.account.get_sub_account(account_id)
+
+    assert account["name"] == "Updated"
+
+    nuki_client.account.delete_sub_account(account_id)
+
+    # Teardown
+    subs = nuki_client.account.list_sub_accounts()
+    for sub in subs:
+        account_id = sub["accountId"]
+        nuki_client.account.delete_sub_account(account_id)
 
 
-def test_delete_sub_account(client):
-    account_id = "abc123"
-    result = client.account.delete_sub_account(account_id)
-    client._mock_request.assert_called_with("DELETE", f"/account/sub/{account_id}")
-    assert result["status"] == "success"
-
-
-# ---- Account operations ----
-def test_delete_account(client):
-    result = client.account.delete()
-    client._mock_request.assert_called_with("DELETE", "/account")
-    assert result["status"] == "success"
-
-
-def test_update_account(client):
-    data = {"accountId": "FAKE"}
-    result = client.account.update(data)
-    client._mock_request.assert_called_with("POST", "/account", json=data)
-    assert result["status"] == "success"
-
+def test_list_integrations(nuki_client):
+    response = nuki_client.account.list_integrations()
+    assert response is not None
 
 def test_change_email(client):
     result = client.account.change_email("fake_email")

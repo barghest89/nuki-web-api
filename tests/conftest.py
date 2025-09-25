@@ -1,8 +1,18 @@
 # tests/conftest.py
+import os
+
 import pytest
 from unittest.mock import patch
+
+from dotenv import load_dotenv
+
 from nukiwebapi.nuki_web_api import NukiWebAPI
 
+load_dotenv()  # looks for .env in cwd
+
+API_TOKEN = os.getenv("NUKI_API_TOKEN")
+SMARTLOCK_ID = int(os.getenv("NUKI_SMARTLOCK_ID"))
+ACCOUNT_ID = int(os.getenv("NUKI_ACCOUNT_USER_ID") ) # existing account user for tests
 
 
 def _default_response(method: str, endpoint: str, json = None, **kwargs):
@@ -24,3 +34,7 @@ def client():
         client = NukiWebAPI("FAKE_API_KEY")
         client._mock_request = mock_request
         yield client
+
+@pytest.fixture
+def nuki_client():
+    return NukiWebAPI(API_TOKEN)

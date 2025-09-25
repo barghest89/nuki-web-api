@@ -1,65 +1,85 @@
 from unittest.mock import patch, call
 
 
-def test_list_services(client):
+def test_list_services_without_filter(client):
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"id": "s1", "name": "ServiceA"}]
-
+        mock_request.return_value = [{"id": "airbnb"}, {"id": "guesty"}]
         result = client.service.list_services()
 
-        mock_request.assert_has_calls([
-            call("GET", "/service")
-        ])
+        mock_request.assert_called_once_with(
+            "GET", "/service", params=None
+        )
         assert isinstance(result, list)
-        assert result[0]["id"] == "s1"
+        assert result[0]["id"] == "airbnb"
+
+
+def test_list_services_with_filter(client):
+    with patch.object(client, "_request") as mock_request:
+        mock_request.return_value = [{"id": "airbnb"}]
+        result = client.service.list_services(["airbnb", "guesty"])
+
+        mock_request.assert_called_once_with(
+            "GET", "/service", params={"serviceIds": "airbnb,guesty"}
+        )
+        assert isinstance(result, list)
+        assert result[0]["id"] == "airbnb"
 
 
 def test_get_service(client):
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"id": "s1", "name": "ServiceA"}
+        mock_request.return_value = {
+            "enabled": True,
+            "started": True,
+            "stopped": False,
+        }
+        result = client.service.get_service("airbnb")
 
-        result = client.service.get_service("s1")
-
-        mock_request.assert_has_calls([
-            call("GET", "/service/s1")
-        ])
-        assert result["id"] == "s1"
+        mock_request.assert_called_once_with(
+            "GET", "/service/airbnb"
+        )
+        assert result["enabled"] is True
 
 
 def test_link_service(client):
+    payload = {"authToken": "xyz"}
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "linked"}
-        payload = {"foo": "bar"}
+        mock_request.return_value = "Linked"
+        result = client.service.link_service("airbnb", payload)
 
-        result = client.service.link_service("s1", payload)
+        mock_request.assert_called_once_with(
+            "POST", "/service/airbnb/link", json=payload
+        )
+        assert result == "Linked"
 
-        mock_request.assert_has_calls([
-            call("POST", "/service/s1/link", json=payload)
-        ])
-        assert result["status"] == "linked"
+
+def test_link_service_without_payload(client):
+    with patch.object(client, "_request") as mock_request:
+        mock_request.return_value = "Linked"
+        result = client.service.link_service("airbnb")
+
+        mock_request.assert_called_once_with(
+            "POST", "/service/airbnb/link", json={}
+        )
+        assert result == "Linked"
 
 
 def test_sync_service(client):
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "synced"}
-        payload = {"sync": True}
+        mock_request.return_value = None
+        result = client.service.sync_service("airbnb")
 
-        result = client.service.sync_service("s1", payload)
-
-        mock_request.assert_has_calls([
-            call("POST", "/service/s1/sync", json=payload)
-        ])
-        assert result["status"] == "synced"
+        mock_request.assert_called_once_with(
+            "POST", "/service/airbnb/sync", json={}
+        )
+        assert result is None
 
 
 def test_unlink_service(client):
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "unlinked"}
-        payload = {"confirm": True}
+        mock_request.return_value = None
+        result = client.service.unlink_service("airbnb")
 
-        result = client.service.unlink_service("s1", payload)
-
-        mock_request.assert_has_calls([
-            call("POST", "/service/s1/unlink", json=payload)
-        ])
-        assert result["status"] == "unlinked"
+        mock_request.assert_called_once_with(
+            "POST", "/service/airbnb/unlink", json={}
+        )
+        assert result is None

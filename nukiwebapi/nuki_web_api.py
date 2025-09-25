@@ -49,20 +49,18 @@ class NukiWebAPI:
         """Fetch all smartlocks and create Smartlock objects mapped by ID."""
         response = self._request("GET", "/smartlock")
         smartlocks = {}
-        if not isinstance(response, list):
-            raise ValueError(f"Expected list from /smartlock, got {type(response)}: {response}")
+        if response.json():
+            for item in response.json():
+                smartlock_id = item.get("smartlockId")
+                if not smartlock_id:
+                    continue  # skip invalid entries
+                smartlock = SmartlockInstance(
+                    client=self,
+                    smartlock_id=smartlock_id,
+                    data=item
+                )
 
-        for item in response:
-            smartlock_id = item.get("smartlockId")
-            if not smartlock_id:
-                continue  # skip invalid entries
-            smartlock = SmartlockInstance(
-                client=self,
-                smartlock_id=smartlock_id,
-                data=item
-            )
-            
-            smartlocks[smartlock_id] = smartlock
+                smartlocks[smartlock_id] = smartlock
 
         return smartlocks
         
@@ -73,13 +71,22 @@ class NukiWebAPI:
         headers["Accept"] = "application/json"
 
         response = requests.request(method, url, headers=headers, **kwargs)
-        response.raise_for_status()
 
-    # Try parsing JSON only if content is non-empty
-        if response.text.strip():
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            # Try to parse detailMessage if present
             try:
-                return response.json()
+                error_json = response.json()
+                detail = error_json.get("detailMessage", response.text)
             except ValueError:
-                return response.text  # raw text fallback
-        return None  # empty response body
-        
+                detail = response.text
+
+            # Raise a new error with detail included
+            raise requests.HTTPError(
+                f"{e} | Detail: {detail}",
+                response=response
+            ) from None
+
+        return response
+

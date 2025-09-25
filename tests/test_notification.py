@@ -8,7 +8,7 @@ def test_list_notifications(client):
         result = client.notification.list_notifications()
 
         mock_request.assert_has_calls([
-            call("GET", "/notification")
+            call("GET", "/notification", params=None)
         ])
         assert isinstance(result, list)
         assert result[0]["id"] == "n1"

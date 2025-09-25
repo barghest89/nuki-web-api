@@ -1,7 +1,13 @@
 import os
 import random
+
+from dotenv import load_dotenv
+
+load_dotenv()  # looks for .env in cwd
+
 import pytest
 from nukiwebapi.nuki_web_api import NukiWebAPI
+
 
 API_TOKEN = os.getenv("NUKI_API_TOKEN")
 EMAIL_PREFIX = os.getenv("TEST_EMAIL_PREFIX")
@@ -105,3 +111,9 @@ def test_invalid_language_rejected(client):
         client.account_user.create_account_user(
             base_email(), "BadLang", type=0, language="xx"
         )
+
+
+def test_invalid_update_rejected(client):
+    """Ensure invalid update raises ValueError (not sent to API)."""
+    with pytest.raises(ValueError, match="language must be one of"):
+        client.account_user.update_account_user(account_user_id="not_a_real_user_id", email="email", name="Wrong Language Test", language="xx")

@@ -1,14 +1,16 @@
-from unittest.mock import patch, call
+from unittest.mock import patch, call, Mock
 
 
 def test_list_reservations(client):
     with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"reservationId": "R1"}]
+        # Create a mock response that has a .json() method
+        mock_response = Mock()
+        mock_response.json.return_value = [{"reservationId": "R1"}]
+        mock_request.return_value = mock_response
+
         result = client.address_reservation.list_reservations(123)
 
-        mock_request.assert_has_calls([
-            call("GET", "/address/123/reservation")
-        ])
+        mock_request.assert_called_once_with("GET", "/address/123/reservation")
         assert isinstance(result, list)
         assert result[0]["reservationId"] == "R1"
 
