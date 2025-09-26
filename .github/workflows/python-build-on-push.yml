@@ -58,7 +58,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: !contains(github.ref, 'post')
+    if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, 'post')
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -79,6 +79,7 @@ jobs:
 
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI
+    if: startsWith(github.ref, 'refs/tags/')
     continue-on-error: true
     needs: build
     runs-on: ubuntu-latest
