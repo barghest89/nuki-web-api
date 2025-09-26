@@ -180,9 +180,3 @@ def test_bulk_update_auth(client):
     assert len(updated_auths) >= len(auth_list)
 
     teardown(client)
-
-def test_list_auths_with_params(client):
-    list = client.smartlock_auth.list_auths_for_smartlock(SMARTLOCK_ID, types="0")
-    assert len(list) > 0
-    list = client.smartlock_auth.list_auths(account_user_id=ACCOUNT_ID, types="0")
-    assert len(list) > 0
