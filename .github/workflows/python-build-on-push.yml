@@ -1,9 +1,7 @@
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
-on:
+on: 
   push:
-    tags:
-      - '*'   # Run workflow on any tag
 
 jobs:
   build:
@@ -18,12 +16,10 @@ jobs:
       TEST_EMAIL_PREFIX: ${{ secrets.TEST_EMAIL_PREFIX }}
       ORIGINAL_EMAIL_PREFIX: ${{ secrets.ORIGINAL_EMAIL_PREFIX }} 
       NUKI_ACCOUNT_USER_ID: ${{ secrets.NUKI_ACCOUNT_USER_ID }}
-
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -44,11 +40,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install pypa/build
-        run: >-
-          python3 -m
-          pip install
-          build
-          --user
+        run: python3 -m pip install --user build
 
       - name: Build a binary wheel and a source tarball
         run: python3 -m build
@@ -61,14 +53,14 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/') && github.ref_name =~ '^[0-9]+\.[0-9]+\.[0-9]+$'
+    if: startsWith(github.ref, 'refs/tags/') && github.ref_name matches '^[0-9]+\.[0-9]+\.[0-9]+$'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/nuki-web-api
     permissions:
-      id-token: write  # Mandatory for trusted publishing
+      id-token: write
 
     steps:
       - name: Download all the dists
@@ -76,29 +68,9 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
-
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-to-testpypi:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
-    if: startsWith(github.ref, 'refs/tags/') && github.ref_name =~ '^[0-9]+\.[0-9]+\.[0-9]+(post[0-9]*)?$'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/nuki-web-api
-    permissions:
-      id-token: write  # Mandatory for trusted publishing
-
-    steps:
-      - name: Download all the dists
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish distribution 📦 to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+    if: startsWith(github.ref, 'refs/tags/') && github.ref_name matches '^_
