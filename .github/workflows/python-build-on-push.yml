@@ -1,6 +1,9 @@
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
-on: push
+on:
+  push:
+    tags:
+      - '*'   # Run workflow on any tag
 
 jobs:
   build:
@@ -8,94 +11,94 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ALT_NUKI_API_TOKEN: ${{ secrets.ALT_NUKI_API_TOKEN}}
-      NUKI_API_TOKEN: ${{ secrets.NUKI_API_TOKEN}}
-      NUKI_SMARTLOCK_ID: ${{ secrets.NUKI_SMARTLOCK_ID}}
+      ALT_NUKI_API_TOKEN: ${{ secrets.ALT_NUKI_API_TOKEN }}
+      NUKI_API_TOKEN: ${{ secrets.NUKI_API_TOKEN }}
+      NUKI_SMARTLOCK_ID: ${{ secrets.NUKI_SMARTLOCK_ID }}
       ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
       TEST_EMAIL_PREFIX: ${{ secrets.TEST_EMAIL_PREFIX }}
       ORIGINAL_EMAIL_PREFIX: ${{ secrets.ORIGINAL_EMAIL_PREFIX }} 
       NUKI_ACCOUNT_USER_ID: ${{ secrets.NUKI_ACCOUNT_USER_ID }}
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.x"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-    - name: Run tests with pytest
-      run: |
-        pytest --maxfail=1 --disable-warnings -q --cov=nukiwebapi --cov-report=xml
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run tests with pytest
+        run: |
+          pytest --maxfail=1 --disable-warnings -q --cov=nukiwebapi --cov-report=xml
 
-    - name: Install pypa/build
-      run: >-
-        python3 -m
-        pip install
-        build
-        --user
-    - name: Build a binary wheel and a source tarball
-      run: python3 -m build
-    - name: Store the distribution packages
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Install pypa/build
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+
+      - name: Build a binary wheel and a source tarball
+        run: python3 -m build
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
 
   publish-to-pypi:
-    name: >-
-      Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
-    needs:
-    - build
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    if: startsWith(github.ref, 'refs/tags/') && github.ref_name =~ '^[0-9]+\.[0-9]+\.[0-9]+$'
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/nuki-web-api
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write  # Mandatory for trusted publishing
 
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-to-testpypi:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
-    continue-on-error: true
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to testPyPI on tag pushes
-    needs:
-    - build
+    if: startsWith(github.ref, 'refs/tags/') && github.ref_name =~ '^[0-9]+\.[0-9]+\.[0-9]+(post[0-9]*)?$'
+    needs: build
     runs-on: ubuntu-latest
-
     environment:
       name: testpypi
       url: https://test.pypi.org/p/nuki-web-api
-
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write  # Mandatory for trusted publishing
 
     steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: python-package-distributions
-        path: dist/
-    - name: Publish distribution 📦 to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distribution 📦 to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
