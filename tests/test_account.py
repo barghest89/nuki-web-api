@@ -1,5 +1,5 @@
 import random
-from time import time, sleep
+import time
 import requests
 import pyotp
 from .test_constants import TEST_EMAIL_PREFIX, ORIGINAL_EMAIL_PREFIX
