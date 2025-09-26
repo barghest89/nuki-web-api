@@ -17,9 +17,19 @@ def test_account_update(nuki_client):
 def test_otp_lifecycle_integration(nuki_client):
     acc = nuki_client.account.get()
     config = acc.get("config", {})
-    if acc.get("config", {}).get("otpEnabledDate") is not None:
-        nuki_client.account.disable_otp()  # Disable first to ensure test status is always the same
-        sleep(5)
+
+    # Step 0: Ensure OTP is disabled before starting
+    if config.get("otpEnabledDate") is not None:
+        nuki_client.account.disable_otp()
+        # Wait until disabled
+        for _ in range(10):
+            acc = nuki_client.account.get()
+            if acc.get("config", {}).get("otpEnabledDate") is None:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError("Failed to disable OTP before test start")
+
     # Step 1: Create OTP secret
     secret = nuki_client.account.create_otp()
     assert isinstance(secret, str)
@@ -28,12 +38,11 @@ def test_otp_lifecycle_integration(nuki_client):
     # Step 2: Generate TOTP from secret (done only in the test!)
     totp = pyotp.TOTP(secret)
 
-    max_retries = 3
+    max_retries = 10
     for attempt in range(1, max_retries + 1):
         code = totp.now()
 
-
-    # Step 3: Enable OTP using generated code
+        # Step 3: Enable OTP using generated code
         try:
             response = nuki_client.account.enable_otp(code)
             if response.status_code == 204:
@@ -41,24 +50,36 @@ def test_otp_lifecycle_integration(nuki_client):
             elif response.status_code == 401:
                 # Wrong OTP → maybe timing issue
                 if attempt < max_retries:
-                    time.sleep(1)  # wait a second and retry
+                    time.sleep(2)  # wait a second and retry
                     continue
                 else:
                     raise RuntimeError("OTP rejected after max retries")
             else:
                 response.raise_for_status()
-        except requests.RequestException as e:
+        except requests.RequestException:
             if attempt == max_retries:
                 raise
-    sleep(5)
-    acc = nuki_client.account.get()
+
+    # Wait until enabled
+    for _ in range(10):
+        acc = nuki_client.account.get()
+        if acc.get("config", {}).get("otpEnabledDate") is not None:
+            break
+        time.sleep(2)
+    else:
+        raise RuntimeError("OTP was not enabled in time")
+
     # Step 4: Disable OTP
-    assert acc.get("config", {}).get("otpEnabledDate") is not None
     nuki_client.account.disable_otp()
-    sleep(1)
-    acc = nuki_client.account.get()
-    assert acc.get("config", {}).get("otpEnabledDate") is None
-    return None
+
+    # Poll until disabled
+    for _ in range(10):
+        acc = nuki_client.account.get()
+        if acc.get("config", {}).get("otpEnabledDate") is None:
+            break
+        time.sleep(1)
+    else:
+        raise RuntimeError("OTP was not disabled in time")
 
 
 # ---- Password reset ----
