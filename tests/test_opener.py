@@ -30,13 +30,25 @@ def test_list_intercoms(client):
     with patch.object(client, "_request") as mock_request:
         mock_request.return_value = [{"id": "i1", "model": "IntercomX"}]
 
+        # Test default call (no params)
         result = client.opener.list_intercoms()
-
         mock_request.assert_has_calls([
-            call("GET", "/opener/intercom", params = None)
+            call("GET", "/opener/intercom", params=None)
         ])
         assert isinstance(result, list)
         assert result[0]["id"] == "i1"
+
+        # Test with brand_id
+        result = client.opener.list_intercoms(brand_id="b1")
+        mock_request.assert_called_with("GET", "/opener/intercom", params={"brandId": "b1"})
+
+        # Test with ignore_verified
+        result = client.opener.list_intercoms(ignore_verified=True)
+        mock_request.assert_called_with("GET", "/opener/intercom", params={"ignoreVerified": True})
+
+        # Test with recently_changed
+        result = client.opener.list_intercoms(recently_changed=True)
+        mock_request.assert_called_with("GET", "/opener/intercom", params={"recentlyChanged": True})
 
 
 def test_get_intercom(client):

@@ -1,5 +1,8 @@
 from typing import Any
 
+from nukiwebapi.smartlock_instance import SmartlockInstance
+
+
 class Smartlock:
     """Sub-client for managing smartlocks."""
 
@@ -25,20 +28,22 @@ class Smartlock:
         if type_ is not None:
             params["type"] = type_
 
-        return self.client._request("GET", "/smartlock", params=params or None)
+        return self.client._request("GET", "/smartlock", params=params or None).json()
 
-    def get_smartlock(self, smartlock_id: int) -> dict[str, Any]:
-        """Get a specific smartlock.
-
-        GET /smartlock/{smartlockId}
+    def get_smartlock(self, smartlock_id: int) -> SmartlockInstance:
+        """
+        Retrieve a smartlock by ID and return a SmartlockInstance wrapper.
 
         Args:
-            smartlock_id (int): Smartlock ID.
+            smartlock_id (int): The ID of the smartlock.
 
         Returns:
-            dict: Smartlock details.
+            SmartlockInstance: An instance with full data and convenience methods.
         """
-        return self.client._request("GET", f"/smartlock/{smartlock_id}")
+        # Fetch the full smartlock data
+        data = self.client._request("GET", f"/smartlock/{smartlock_id}")
+        # Wrap in SmartlockInstance, preserving all API fields
+        return SmartlockInstance(self, smartlock_id, data=data)
 
     def update_smartlock(self, smartlock_id: int, data: dict[str, Any] | None = None) -> None:
         """Update a smartlock.
@@ -177,7 +182,7 @@ class Smartlock:
         """
         return self.client._request("POST", f"/smartlock/{smartlock_id}/config", json=data or {})
 
-    def sync_smartlock(self, smartlock_id: int, data: dict[str, Any] | None = None) -> None:
+    def sync_smartlock(self, smartlock_id: int) -> None:
         """Sync smartlock state.
 
         POST /smartlock/{smartlockId}/sync
@@ -189,7 +194,7 @@ class Smartlock:
         Returns:
             None: Empty response on success.
         """
-        return self.client._request("POST", f"/smartlock/{smartlock_id}/sync", json=data or {})
+        return self.client._request("POST", f"/smartlock/{smartlock_id}/sync")
 
     def bulk_web_config(self, data: dict[str, Any] | None = None) -> None:
         """Apply bulk web configuration to smartlocks.

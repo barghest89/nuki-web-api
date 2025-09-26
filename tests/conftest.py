@@ -4,25 +4,53 @@ import os
 import pytest
 from unittest.mock import patch
 
-from dotenv import load_dotenv
+from tests.test_constants import API_TOKEN
 
 from nukiwebapi.nuki_web_api import NukiWebAPI
 
-load_dotenv()  # looks for .env in cwd
-
-API_TOKEN = os.getenv("NUKI_API_TOKEN")
-SMARTLOCK_ID = int(os.getenv("NUKI_SMARTLOCK_ID"))
-ACCOUNT_ID = int(os.getenv("NUKI_ACCOUNT_USER_ID") ) # existing account user for tests
+from requests.models import Response
+import json as pyjson
 
 
-def _default_response(method: str, endpoint: str, json = None, **kwargs):
-    """Return a safe default response for any endpoint."""
-    json_data = kwargs.get("json") or {}
+from requests.models import Response
+import json as json_module
 
-    if isinstance(json, list):
-        return {"status": "success", "ids": json}
 
-    return {"status": "success", **(json or {})}
+def _default_response(method: str, endpoint: str, json=None, **kwargs) -> Response:
+    """Return a fake Response object for testing."""
+
+    resp = Response()
+    resp.status_code = 200
+    resp.headers["Content-Type"] = "application/json"
+
+    # Determine response content based on endpoint
+    if endpoint == "/address":
+        # Return a list of addresses
+        content = [
+            {"id": 1, "name": "Fake Address", "smartlockIds": [123]}
+        ]
+    elif endpoint.startswith("/smartlock/") and "/log" in endpoint:
+        # Return fake logs
+        content = [
+            {"id": "log1", "smartlockId": 123, "action": 1}
+        ]
+    elif endpoint.startswith("/smartlock/") and "/auth" in endpoint:
+        # Return fake auths
+        content = [
+            {"id": "auth1", "smartlockId": 123, "name": "Test Auth"}
+        ]
+    elif isinstance(json, list):
+        content = {"status": "success", "ids": json}
+    elif isinstance(json, dict):
+        content = {"status": "success", **json}
+    else:
+        content = {"status": "success"}
+
+    # Serialize content into the response object
+    resp._content = json_module.dumps(content).encode("utf-8")
+    resp.encoding = "utf-8"
+
+    return resp
 
 @pytest.fixture
 def client():

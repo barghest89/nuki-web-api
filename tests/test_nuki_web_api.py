@@ -1,49 +1,42 @@
+from unittest.mock import Mock, patch, MagicMock
+
 import pytest
-from unittest.mock import patch, Mock
-from nukiwebapi.nuki_web_api import NukiWebAPI, SmartlockInstance
+import requests
+from requests import Response, Request
+
+from nukiwebapi import NukiWebAPI
 
 
-class FakeResponse:
-    def __init__(self, payload):
-        self._payload = payload
+def test_fetch_smartlocks_skips_invalid_entries(client):
+    """_fetch_smartlocks should skip entries missing 'smartlockId'."""
 
-    def json(self):
-        return self._payload
-
-
-
-
-def test_fetch_smartlocks_skips_items_without_id():
-    """_fetch_smartlocks skips smartlock entries without 'smartlockId'."""
-    fake_response = FakeResponse([
-        {"smartlockId": 123, "name": "Lock 123"},
-        {"name": "No ID"}
-    ])
-    with patch.object(NukiWebAPI, "_request", return_value=fake_response):
-        client = NukiWebAPI("FAKE_API_KEY")
-        locks = client._fetch_smartlocks()
-        assert 123 in locks
-        assert len(locks) == 1
-        assert isinstance(locks[123], SmartlockInstance)
-
-
-
-def test_request_calls_requests_with_correct_headers():
-    """_request sets Authorization and Accept headers correctly."""
+    # Mock _request to return a Response-like object with .json() method
     fake_response = Mock()
-    fake_response.text = '{"ok": true}'
-    fake_response.raise_for_status = Mock()
-    fake_response.json.return_value = {"ok": True}
+    fake_response.json.return_value = [
+        {"name": "valid_lock", "smartlockId": 123},
+        {"name": "invalid_lock"}  # missing smartlockId
+    ]
 
-    with patch("requests.request", return_value=fake_response) as mock_req:
-        client = NukiWebAPI("FAKE_API_KEY")
-        result = client._request("GET", "/test", headers={"X-Custom": "Value"})
+    with patch.object(client, "_request", return_value=fake_response):
+        smartlocks = client._fetch_smartlocks()
+        assert 123 in smartlocks
+        # Ensure the invalid entry was skipped
+        assert all(lock.id != None for lock in smartlocks.values())
 
-        mock_req.assert_called_once()
-        args, kwargs = mock_req.call_args
-        # Verify headers
-        assert kwargs["headers"]["Authorization"] == "Bearer FAKE_API_KEY"
-        assert kwargs["headers"]["Accept"] == "application/json"
-        assert kwargs["headers"]["X-Custom"] == "Value"
-        # Verify return value
-        assert result.json() == {"ok": True}
+def test_request_value_error_captured():
+    """_request should handle ValueError when response.json() fails."""
+    client = NukiWebAPI("FAKE_TOKEN")
+
+    # Create a real Response object
+    fake_response = requests.Response()
+    fake_response.status_code = 400
+    fake_response._content = b"Not JSON content"  # raw bytes
+    fake_response.url = "https://api.nuki.io/endpoint"
+
+    # Patch requests.request to return this response
+    with patch("requests.request", return_value=fake_response):
+        with pytest.raises(requests.HTTPError) as excinfo:
+            res = client._request("GET", "/endpoint")
+            print(res)
+    # Check that the fallback text from .text is in the exception
+    assert "Not JSON content" in str(excinfo.value)

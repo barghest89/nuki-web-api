@@ -45,14 +45,15 @@ def test_lock_calls_action(client):
     with patch.object(instance, "_action") as mock_action:
         mock_action.return_value = {"status": "locked"}
         result = instance.lock()
-        mock_action.assert_called_once_with(2)
+        mock_action.assert_called_once_with(2, option = None)
         assert result["status"] == "locked"
 
     # full lock
     with patch.object(instance, "_action") as mock_action:
         mock_action.return_value = {"status": "full_locked"}
         result = instance.lock(full=True)
-        mock_action.assert_called_once_with(6)
+        mock_action.assert_called_once_with(2, option=4)
+        assert result["status"] == "full_locked"
         assert result["status"] == "full_locked"
 
 
@@ -61,7 +62,7 @@ def test_unlock_calls_action(client):
     with patch.object(instance, "_action") as mock_action:
         mock_action.return_value = {"status": "unlocked"}
         result = instance.unlock()
-        mock_action.assert_called_once_with(1)
+        mock_action.assert_called_once_with(1, option = None)
         assert result["status"] == "unlocked"
 
 
@@ -105,3 +106,36 @@ def test_action_calls_client_request(client):
             call("GET", "/smartlock/123")
         ])
         assert result["status"] == "ok"
+
+
+def test_action_includes_option(client):
+    """_action should include 'option' in payload if provided."""
+    instance = SmartlockInstance(client, smartlock_id=123)
+
+    # Patch the client's _request method
+    with patch.object(client, "_request") as mock_request:
+        mock_request.return_value = {"status": "ok"}
+
+        # Call _action with option
+        result = instance._action(action=2, option=4)
+
+        # Verify _request called with correct payload
+        mock_request.assert_any_call("POST", "/smartlock/123/action", json={"action": 2, "option": 4})
+        # Also verify refresh call
+        mock_request.assert_any_call("GET", "/smartlock/123")
+
+        # Check returned value
+        assert result["status"] == "ok"
+
+def test_raw_data_property():
+    """raw_data property returns the internal _data dictionary."""
+    initial_data = {"id": 123, "state": {"state": 1}}
+    instance = SmartlockInstance(client=None, smartlock_id=123, data=initial_data)
+
+    # Access the property
+    data = instance.raw_data
+    assert data == initial_data
+
+    # Modify internal _data and verify property updates
+    instance._data["state"]["state"] = 0
+    assert instance.raw_data["state"]["state"] == 0

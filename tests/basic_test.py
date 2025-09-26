@@ -6,7 +6,7 @@ import os
 
 load_dotenv()  # looks for .env in cwd
 API_TOKEN = os.getenv("NUKI_API_TOKEN")
-SMARTLOCK_ID = os.getenv("NUKI_SMARTLOCK_ID")
+SMARTLOCK_ID = int(os.getenv("NUKI_SMARTLOCK_ID"))
 
 
 def test_basic_1():

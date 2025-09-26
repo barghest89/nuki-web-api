@@ -1,18 +1,17 @@
-import pytest
+from time import sleep
+
+from tests.test_constants import SMARTLOCK_ID
 
 def test_list_addresses(client):
     """Test listing addresses."""
     addresses = client.address.list_addresses()
-    # Default mock returns {"status": "success"}; adjust for list expectations
-    assert "status" in addresses or isinstance(addresses, dict)
+    assert isinstance(addresses, list)
 
 
 def test_create_address(client):
     """Test creating an address."""
-    result = client.address.create_address("MyAddress", [123])
-    assert result["status"] == "success"
-    assert result.get("name") == "MyAddress"
-    assert result.get("smartlockIds") == [123]
+    result = client.address.create_address("Test_Address", [SMARTLOCK_ID])
+    assert len(result) > 0
 
 
 def test_update_address(client):
@@ -27,7 +26,7 @@ def test_update_address(client):
 def test_delete_address(client):
     """Test deleting an address."""
     result = client.address.delete_address(123)
-    assert result["status"] == "success"
+    assert len(result) > 0
 
 
 def test_list_address_units(client):

@@ -1,30 +1,30 @@
-from unittest.mock import patch, call, MagicMock
+from unittest.mock import patch, call
 import pytest
 
-
-def test_list_smartlocks(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = [{"id": 123, "name": "Front Door"}]
-
-        result = client.smartlock.list_smartlocks()
-
-        mock_request.assert_has_calls([call("GET", "/smartlock")])
-        assert isinstance(result, list)
-        assert result[0]["id"] == 123
+from tests.test_constants import SMARTLOCK_ID
 
 
-def test_get_smartlock(client):
-    with patch.object(client, "_request") as mock_request, \
-         patch("nukiwebapi.smartlock.SmartlockInstance") as mock_instance:
+def test_list_smartlocks(nuki_client):
+    lst = nuki_client.smartlock.list_smartlocks()
+    assert len(lst) > 0
 
-        mock_request.return_value = {"id": 123, "name": "Front Door"}
-        mock_instance.return_value = "mocked_instance"
 
-        result = client.smartlock.get_smartlock(123)
+def test_list_smartlocks_with_params(nuki_client):
+    # Cover lines where params dict is populated (auth_id and type_)
+    with patch.object(nuki_client, "_request") as mock_request:
+        mock_request.return_value.json.return_value = [{"smartlockId": 123}]
 
-        mock_request.assert_called_once_with("GET", "/smartlock/123")
-        mock_instance.assert_called_once_with(client, 123, {"id": 123, "name": "Front Door"})
-        assert result == "mocked_instance"
+        result = nuki_client.smartlock.list_smartlocks(auth_id=42, type_=1)
+
+        mock_request.assert_called_once_with(
+            "GET", "/smartlock", params={"authId": 42, "type": 1}
+        )
+        assert result[0]["smartlockId"] == 123
+
+
+def test_get_smartlock(nuki_client):
+    sl_instance = nuki_client.smartlock.get_smartlock(SMARTLOCK_ID)
+    assert sl_instance.id == SMARTLOCK_ID
 
 
 def test_bulk_web_config(client):
@@ -49,6 +49,16 @@ def test_update_smartlock(client):
         assert result["status"] == "success"
 
 
+def test_update_smartlock_with_none(client):
+    # Cover 'data or {}' branch
+    with patch.object(client, "_request") as mock_request:
+        mock_request.return_value = {"status": "success"}
+
+        result = client.smartlock.update_smartlock(123, data=None)
+        mock_request.assert_called_once_with("POST", "/smartlock/123", json={})
+        assert result["status"] == "success"
+
+
 def test_delete_smartlock(client):
     with patch.object(client, "_request") as mock_request:
         mock_request.return_value = {"status": "success"}
@@ -67,6 +77,16 @@ def test_action(client):
         result = client.smartlock.action(123, action_data)
 
         mock_request.assert_called_once_with("POST", "/smartlock/123/action", json=action_data)
+        assert result["status"] == "success"
+
+
+def test_action_with_none(client):
+    # Cover 'data or {}' branch
+    with patch.object(client, "_request") as mock_request:
+        mock_request.return_value = {"status": "success"}
+
+        result = client.smartlock.action(123, data=None)
+        mock_request.assert_called_once_with("POST", "/smartlock/123/action", json={})
         assert result["status"] == "success"
 
 
@@ -125,14 +145,9 @@ def test_update_config(client):
         assert result["status"] == "success"
 
 
-def test_sync_smartlock(client):
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"status": "success"}
-
-        result = client.smartlock.sync_smartlock(123)
-
-        mock_request.assert_called_once_with("POST", "/smartlock/123/sync")
-        assert result["status"] == "success"
+def test_sync_smartlock(nuki_client):
+    response = nuki_client.smartlock.sync_smartlock(SMARTLOCK_ID)
+    assert response.status_code == 204
 
 
 def test_update_web_config(client):
