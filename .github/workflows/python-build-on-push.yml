@@ -2,8 +2,6 @@ name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 
 on:
   push:
-    branches:
-      - '**'  # run tests on every branch
     tags:
       - '[0-9]*.[0-9]*.[0-9]*'        # PyPI tags
       - '[0-9]*.[0-9]*.[0-9]*post*'   # TestPyPI tags
@@ -60,7 +58,7 @@ jobs:
 
   publish-to-pypi:
     name: Publish Python distribution to PyPI
-    if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref, 'post')
+    if: !contains(github.ref, 'post')
     needs: build
     runs-on: ubuntu-latest
     environment:
@@ -81,7 +79,6 @@ jobs:
 
   publish-to-testpypi:
     name: Publish Python distribution to TestPyPI
-    if: startsWith(github.ref, 'refs/tags/')
     continue-on-error: true
     needs: build
     runs-on: ubuntu-latest
