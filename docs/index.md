@@ -37,8 +37,6 @@ for lock_id, lock in client.lock_instances:
     
 [API Reference](https://api.nuki.io/)
 
-[nuki-web-api reference](https://barghest89.github.io/nuki-web-api/)
-
 ## Development
 Clone the repository and install in editable mode:
 
