@@ -1,5 +1,10 @@
 # nuki-web-api
 
+![PyPI - Version](https://img.shields.io/pypi/v/nuki-web-api)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/barghest89/nuki-web-api/python-build-on-push.yml)
+![PyPI - License](https://img.shields.io/pypi/l/nuki-web-api)
+
+
 A Python wrapper for the [Nuki Web API](https://api.nuki.io/).
 
 ## Installation
