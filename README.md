@@ -24,6 +24,12 @@ for lock_id, lock in client.lock_instances:
 
 ```
 
+## Documentation
+    
+[API Reference](https://api.nuki.io/)
+
+[nuki-web-api reference](https://barghest89.github.io/nuki-web-api/)
+
 ## Disclaimer
 
 This API wrapper is in **Alpha** stage. I do not have the resources to fully test all provided methods against the API (e.g. account deletion).
