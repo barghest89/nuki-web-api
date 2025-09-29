@@ -1,9 +1,8 @@
 # Nuki Web API Python Client
 
-[![PyPI version](https://img.shields.io/pypi/v/nukiwebapi.svg)](https://pypi.org/project/nukiwebapi/)
-[![Python versions](https://img.shields.io/pypi/pyversions/nukiwebapi.svg)](https://pypi.org/project/nukiwebapi/)
-[![License](https://img.shields.io/github/license/barghest89/nuki-web-api.svg)](https://github.com/barghest89/nuki-web-api/blob/main/LICENSE)
-[![Build Status](https://github.com/barghest89/nuki-web-api/actions/workflows/tests.yml/badge.svg)](https://github.com/barghest89/nuki-web-api/actions)
+![PyPI version](https://img.shields.io/pypi/v/nuki-web-api.svg)](https://pypi.org/project/nuki-web-api/)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/barghest89/nuki-web-api/python-build-on-push.yml)
+![PyPI - License](https://img.shields.io/pypi/l/nuki-web-api)
 
 A Python client for the [Nuki Web API](https://developer.nuki.io/page/nuki-web/2/), providing convenient access to smartlock management, accounts, and related features.
 
@@ -37,6 +36,8 @@ for lock_id, lock in client.lock_instances:
 ## Documentation
     
 [API Reference](https://api.nuki.io/)
+
+[nuki-web-api reference](https://barghest89.github.io/nuki-web-api/)
 
 ## Development
 Clone the repository and install in editable mode:
