@@ -30,7 +30,7 @@ jobs:
         run: pip install -e .[dev]
       - run: mkdocs build
       - run: ls -l ./site
-      - run: mkdocs gh-deploy
+      - run: mkdocs gh-deploy --force
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/main'
