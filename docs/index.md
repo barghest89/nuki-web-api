@@ -1,6 +1,6 @@
 # Nuki Web API Python Client
 
-![PyPI version](https://img.shields.io/pypi/v/nuki-web-api.svg)](https://pypi.org/project/nuki-web-api/)
+![PyPI - Version](https://img.shields.io/pypi/v/nuki-web-api)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/barghest89/nuki-web-api/python-build-on-push.yml)
 ![PyPI - License](https://img.shields.io/pypi/l/nuki-web-api)
 
