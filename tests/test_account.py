@@ -1,10 +1,15 @@
 import random
 import time
+
+import pytest
 import requests
 import pyotp
 from .test_constants import TEST_EMAIL_PREFIX, ORIGINAL_EMAIL_PREFIX
 
 def test_account_update(nuki_client):
+    if not TEST_EMAIL_PREFIX or not ORIGINAL_EMAIL_PREFIX:
+        pytest.skip("NUKI_API_TOKEN or TEST_EMAIL_PREFIX not set", allow_module_level=True)
+
     nuki_client.account.update(language="en", email=f"{TEST_EMAIL_PREFIX}@gmail.com")
     nuki_client.account.update(language="de", email=f"{ORIGINAL_EMAIL_PREFIX}@gmail.com")
     account_data = nuki_client.account.get()
