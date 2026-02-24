@@ -41,7 +41,7 @@ class Smartlock:
             SmartlockInstance: An instance with full data and convenience methods.
         """
         # Fetch the full smartlock data
-        data = self.client._request("GET", f"/smartlock/{smartlock_id}")
+        data = self.client._request("GET", f"/smartlock/{smartlock_id}").json()
         # Wrap in SmartlockInstance, preserving all API fields
         return SmartlockInstance(self, smartlock_id, data=data)
 

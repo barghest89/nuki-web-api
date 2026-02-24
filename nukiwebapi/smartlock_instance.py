@@ -56,7 +56,7 @@ class SmartlockInstance:
         Returns:
             dict: The latest smartlock state object from the API.
         """
-        self._data = self.client._request("GET", f"/smartlock/{self.id}")
+        self._data = self.client._request("GET", f"/smartlock/{self.id}").json()
         return self._data
 
     # --- Internal action helper ---
