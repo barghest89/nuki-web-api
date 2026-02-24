@@ -1,4 +1,4 @@
-from unittest.mock import patch, call
+from unittest.mock import patch, call, Mock
 import pytest
 
 from nukiwebapi.smartlock_instance import SmartlockInstance
@@ -31,11 +31,16 @@ def test_hex_id_calculation():
     assert instance.hex_id == "1A2B3C4D"
 
 
+
 def test_refresh_calls_request(client):
     instance = SmartlockInstance(client, smartlock_id=123)
-    with patch.object(client, "_request") as mock_request:
-        mock_request.return_value = {"id": 123, "state": {"state": 0}}
+
+    mock_response = Mock()
+    mock_response.json.return_value = {"id": 123, "state": {"state": 0}}
+
+    with patch.object(client, "_request", return_value=mock_response) as mock_request:
         result = instance.refresh()
+
         mock_request.assert_called_once_with("GET", "/smartlock/123")
         assert result["id"] == 123
 
@@ -92,19 +97,23 @@ def test_lock_and_go_calls_action(client):
         mock_action.assert_called_once_with(5)
         assert result["status"] == "locked_go_unlatch"
 
+
 def test_action_calls_client_request(client):
     instance = SmartlockInstance(client, smartlock_id=123)
 
-    with patch.object(client, "_request") as mock_request:
+    with patch.object(client, "_request") as mock_request, \
+         patch.object(instance, "refresh") as mock_refresh:
+
         mock_request.return_value = {"status": "ok"}
 
-        # Call _action directly
         result = instance._action(42)
 
-        mock_request.assert_has_calls([
-            call("POST", "/smartlock/123/action", json={"action": 42}),
-            call("GET", "/smartlock/123")
-        ])
+        mock_request.assert_called_once_with(
+            "POST",
+            "/smartlock/123/action",
+            json={"action": 42},
+        )
+        mock_refresh.assert_called_once()
         assert result["status"] == "ok"
 
 
@@ -112,19 +121,20 @@ def test_action_includes_option(client):
     """_action should include 'option' in payload if provided."""
     instance = SmartlockInstance(client, smartlock_id=123)
 
-    # Patch the client's _request method
-    with patch.object(client, "_request") as mock_request:
+    with patch.object(client, "_request") as mock_request, \
+         patch.object(instance, "refresh") as mock_refresh:
+
         mock_request.return_value = {"status": "ok"}
 
-        # Call _action with option
         result = instance._action(action=2, option=4)
 
-        # Verify _request called with correct payload
-        mock_request.assert_any_call("POST", "/smartlock/123/action", json={"action": 2, "option": 4})
-        # Also verify refresh call
-        mock_request.assert_any_call("GET", "/smartlock/123")
+        mock_request.assert_called_once_with(
+            "POST",
+            "/smartlock/123/action",
+            json={"action": 2, "option": 4},
+        )
 
-        # Check returned value
+        mock_refresh.assert_called_once()
         assert result["status"] == "ok"
 
 def test_raw_data_property():
